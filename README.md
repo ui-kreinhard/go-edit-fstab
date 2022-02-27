@@ -1,4 +1,4 @@
-# go-edit-cmdline
+# go-edit-fstab
 ## What is it?
 It is really cumbersome to edit the fstab via ansible with a template engine.
 
