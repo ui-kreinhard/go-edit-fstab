@@ -62,6 +62,7 @@ func GetFstabLines(mountPoints []*MountPoint) string {
 		if mountPoint.Removed {
 			continue
 		}
+		mountPoint.applyTmpfsTemplate()
 		fstabLines = append(fstabLines, mountPoint.toFstabLine())
 	}
 	return strings.Join(fstabLines, "\n")
