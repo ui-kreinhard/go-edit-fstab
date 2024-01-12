@@ -13,13 +13,13 @@ import (
 )
 
 type MountPoint struct {
-	device     string
-	mountPoint string
-	fsType     string
-	options    string
-	dump       bool
-	pass       bool
-	removed    bool
+	Device     string
+	MountPoint string
+	FsType     string
+	Options    string
+	Dump       bool
+	Pass       bool
+	Removed    bool
 }
 
 func boolToBinaryString(v bool) string {
@@ -30,12 +30,12 @@ func boolToBinaryString(v bool) string {
 }
 
 func (m *MountPoint) toFstabLine() string {
-	return fmt.Sprint(m.device, "\t",
-		m.mountPoint, "\t",
-		m.fsType, "\t",
-		m.options, "\t",
-		boolToBinaryString(m.dump), "\t",
-		boolToBinaryString(m.pass),
+	return fmt.Sprint(m.Device, "\t",
+		m.MountPoint, "\t",
+		m.FsType, "\t",
+		m.Options, "\t",
+		boolToBinaryString(m.Dump), "\t",
+		boolToBinaryString(m.Pass),
 	)
 }
 
@@ -44,11 +44,11 @@ func getFormatHeader() string {
 }
 
 func (m *MountPoint) applyTmpfsTemplate() {
-	if m.device == "tmpfs" {
-		m.fsType = "tmpfs"
-		m.options = "nosuid,nodev"
-		m.dump = false
-		m.pass = false
+	if m.Device == "tmpfs" {
+		m.FsType = "tmpfs"
+		m.Options = "nosuid,nodev"
+		m.Dump = false
+		m.Pass = false
 	}
 }
 
@@ -61,26 +61,26 @@ func (m *MountPoint) Edit(expression string) error {
 	value := operands[1]
 	switch variable {
 	case "device":
-		m.device = value
+		m.Device = value
 		m.applyTmpfsTemplate()
 	case "mountPoint":
-		m.mountPoint = value
+		m.MountPoint = value
 	case "fsType":
-		m.fsType = value
+		m.FsType = value
 	case "options":
-		m.options = value
+		m.Options = value
 	case "dump":
 		v, err := strconv.ParseBool(value)
 		if err != nil {
 			return err
 		}
-		m.dump = v
+		m.Dump = v
 	case "pass":
 		v, err := strconv.ParseBool(value)
 		if err != nil {
 			return err
 		}
-		m.pass = v
+		m.Pass = v
 	default:
 		return errors.New("invalid var name " + variable)
 	}
@@ -104,7 +104,7 @@ func FromLine(fstabLine []string) (MountPoint, error) {
 	}, nil
 }
 
-func getMountPoints(rawFile string) []*MountPoint {
+func GetMountPoints(rawFile string) []*MountPoint {
 	mountPoints := []*MountPoint{}
 	rawLines := strings.Split(string(rawFile), "\n")
 	for _, rawLine := range rawLines {
@@ -123,8 +123,8 @@ func getMountPoints(rawFile string) []*MountPoint {
 
 func remove(mountPointToRemove string) error {
 	for _, mountPoint := range mountPoints {
-		if mountPoint.mountPoint == mountPointToRemove {
-			mountPoint.removed = true
+		if mountPoint.MountPoint == mountPointToRemove {
+			mountPoint.Removed = true
 			return nil
 		}
 	}
@@ -133,12 +133,12 @@ func remove(mountPointToRemove string) error {
 
 func editOrAdd(mountPointToEdit string, expression string) error {
 	for _, mountPoint := range mountPoints {
-		if mountPoint.mountPoint == mountPointToEdit {
+		if mountPoint.MountPoint == mountPointToEdit {
 			return mountPoint.Edit(expression)
 		}
 	}
 	newMountPoint := MountPoint{}
-	newMountPoint.mountPoint = mountPointToEdit
+	newMountPoint.MountPoint = mountPointToEdit
 	err := newMountPoint.Edit(expression)
 	if err != nil {
 		return err
@@ -170,12 +170,12 @@ func strategy(commandIndex int, command string) (int, error) {
 	}
 }
 
-func getFstabLines(mountPoints []*MountPoint) string {
+func GetFstabLines(mountPoints []*MountPoint) string {
 	fstabLines := []string{
 		getFormatHeader(),
 	}
 	for _, mountPoint := range mountPoints {
-		if mountPoint.removed {
+		if mountPoint.Removed {
 			continue
 		}
 		fstabLines = append(fstabLines, mountPoint.toFstabLine())
@@ -200,7 +200,7 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	mountPoints = getMountPoints(string(rawFile))
+	mountPoints = GetMountPoints(string(rawFile))
 
 	skipCounter := 1
 
@@ -214,8 +214,8 @@ func main() {
 			log.Fatalln(err)
 		}
 	}
-	pretty.Println(getFstabLines(mountPoints))
-	err = ioutil.WriteFile(targetFstab, []byte(pretty.Sprint(getFstabLines(mountPoints))+"\n"), 0644)
+	pretty.Println(GetFstabLines(mountPoints))
+	err = os.WriteFile(targetFstab, []byte(pretty.Sprint(GetFstabLines(mountPoints))+"\n"), 0644)
 	if err != nil {
 		log.Fatalln(err)
 	}
